@@ -1,0 +1,3 @@
+package com.compcorp.commerce.shipping;
+import java.math.BigDecimal;
+public class FlatRateShippingCalculator implements ShippingCalculator {private final BigDecimal flatFee;public FlatRateShippingCalculator(BigDecimal flatFee){if(flatFee==null||flatFee.signum()<0)throw new IllegalArgumentException("Fee must be non-negative");this.flatFee=flatFee;}public BigDecimal feeFor(String destination,BigDecimal orderValue){if(destination==null||destination.isBlank())throw new IllegalArgumentException("Destination required");return orderValue!=null&&orderValue.compareTo(new BigDecimal("100.00"))>=0?BigDecimal.ZERO:flatFee;}}

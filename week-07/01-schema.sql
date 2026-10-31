@@ -1,0 +1,5 @@
+CREATE TABLE customers (id BIGSERIAL PRIMARY KEY, first_name VARCHAR(80) NOT NULL, last_name VARCHAR(80) NOT NULL, email VARCHAR(254) NOT NULL UNIQUE);
+CREATE TABLE products (id BIGSERIAL PRIMARY KEY, sku VARCHAR(50) NOT NULL UNIQUE, name VARCHAR(160) NOT NULL, description TEXT, price NUMERIC(12,2) NOT NULL CHECK(price > 0), stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK(stock_quantity >= 0));
+CREATE TABLE customer_orders (id BIGSERIAL PRIMARY KEY, customer_id BIGINT NOT NULL REFERENCES customers(id), status VARCHAR(20) NOT NULL CHECK(status IN ('PENDING','PAID','SHIPPED','DELIVERED','CANCELLED')), total NUMERIC(12,2) NOT NULL CHECK(total >= 0), created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE order_items (id BIGSERIAL PRIMARY KEY, order_id BIGINT NOT NULL REFERENCES customer_orders(id) ON DELETE CASCADE, product_id BIGINT NOT NULL REFERENCES products(id), quantity INTEGER NOT NULL CHECK(quantity > 0), unit_price NUMERIC(12,2) NOT NULL CHECK(unit_price > 0));
+CREATE INDEX idx_orders_customer ON customer_orders(customer_id); CREATE INDEX idx_orders_status_date ON customer_orders(status,created_at); CREATE INDEX idx_products_name ON products(name);

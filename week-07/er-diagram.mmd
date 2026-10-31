@@ -1,0 +1,8 @@
+erDiagram
+ CUSTOMERS ||--o{ CUSTOMER_ORDERS : places
+ CUSTOMER_ORDERS ||--|{ ORDER_ITEMS : contains
+ PRODUCTS ||--o{ ORDER_ITEMS : referenced_by
+ CUSTOMERS {bigint id PK; varchar email UK}
+ PRODUCTS {bigint id PK; varchar sku UK; numeric price; int stock_quantity}
+ CUSTOMER_ORDERS {bigint id PK; bigint customer_id FK; varchar status; numeric total}
+ ORDER_ITEMS {bigint id PK; bigint order_id FK; bigint product_id FK; int quantity; numeric unit_price}

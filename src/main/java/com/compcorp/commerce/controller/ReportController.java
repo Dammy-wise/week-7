@@ -1,0 +1,2 @@
+package com.compcorp.commerce.controller; import com.compcorp.commerce.dto.Views;import com.compcorp.commerce.service.CommerceService;import org.springframework.web.bind.annotation.*;
+@RestController @RequestMapping("/api/v1/reports") public class ReportController{private final CommerceService s;public ReportController(CommerceService s){this.s=s;} @GetMapping("/sales") public Views.SalesReport sales(){return s.sales();}}

@@ -1,0 +1,3 @@
+package com.compcorp.commerce.batch;
+import java.nio.file.Path;
+public final class BatchImportRunner {private BatchImportRunner(){} public static void main(String[] args)throws Exception{String input=System.getenv().getOrDefault("IMPORT_INPUT",System.getProperty("import.input","week-06/sample-orders.csv"));String output=System.getenv().getOrDefault("REPORT_OUTPUT",System.getProperty("report.output","week-06/generated-report.json"));var result=OrderCsvImporter.importFile(Path.of(input));BatchReportExporter.write(result,Path.of(output));System.out.printf("Accepted: %d, rejected: %d, total: %s%n",result.accepted().size(),result.rejected().size(),result.total());}}

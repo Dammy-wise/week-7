@@ -1,0 +1,22 @@
+package com.compcorp.commerce.service;
+import com.compcorp.commerce.dto.*; import com.compcorp.commerce.entity.*; import com.compcorp.commerce.exception.*; import com.compcorp.commerce.repository.*;
+import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.math.BigDecimal; import java.util.*; import java.util.logging.Logger;
+@Service @Transactional
+public class CommerceService {
+ private static final Logger log=Logger.getLogger(CommerceService.class.getName());
+ private final ProductRepository products; private final CustomerRepository customers; private final OrderRepository orders;
+ public CommerceService(ProductRepository p,CustomerRepository c,OrderRepository o){products=p;customers=c;orders=o;}
+ public List<Views.ProductView> listProducts(String q,BigDecimal min,BigDecimal max,boolean available){return products.findAll().stream().filter(p->q==null||p.getName().toLowerCase().contains(q.toLowerCase())||p.getSku().toLowerCase().contains(q.toLowerCase())).filter(p->min==null||p.getPrice().compareTo(min)>=0).filter(p->max==null||p.getPrice().compareTo(max)<=0).filter(p->!available||p.getStockQuantity()>0).map(Views.ProductView::of).toList();}
+ public Views.ProductView product(Long id){return Views.ProductView.of(productOrThrow(id));}
+ public Views.ProductView createProduct(Requests.ProductRequest r){if(products.findBySku(r.sku()).isPresent())throw new ConflictException("SKU already exists");return Views.ProductView.of(products.save(new Product(r.sku(),r.name(),r.description(),r.price(),r.stockQuantity())));}
+ public Views.ProductView updateProduct(Long id,Requests.ProductRequest r){Product p=productOrThrow(id);if(!p.getSku().equals(r.sku())&&products.findBySku(r.sku()).isPresent())throw new ConflictException("SKU already exists");p.update(r.name(),r.description(),r.price(),r.stockQuantity());return Views.ProductView.of(p);}
+ public void deleteProduct(Long id){Product p=productOrThrow(id);products.delete(p);}
+ public Views.ProductView adjustStock(Long id,int delta){Product p=productOrThrow(id);try{p.adjustStock(delta);}catch(IllegalArgumentException e){throw new ConflictException(e.getMessage());}return Views.ProductView.of(p);}
+ public List<Views.CustomerView> listCustomers(){return customers.findAll().stream().map(Views.CustomerView::of).toList();}
+ public Views.CustomerView createCustomer(Requests.CustomerRequest r){if(customers.findByEmail(r.email()).isPresent())throw new ConflictException("Email already exists");return Views.CustomerView.of(customers.save(new Customer(r.firstName(),r.lastName(),r.email())));}
+ public Views.OrderView placeOrder(Requests.OrderRequest r){Customer c=customers.findById(r.customerId()).orElseThrow(()->new NotFoundException("Customer not found: "+r.customerId()));CustomerOrder order=new CustomerOrder(c,BigDecimal.ZERO);BigDecimal total=BigDecimal.ZERO;for(var line:r.items()){Product p=productOrThrow(line.productId());if(line.quantity()<1)throw new ConflictException("Quantity must be positive");if(p.getStockQuantity()<line.quantity())throw new InsufficientStockException("Insufficient stock for SKU "+p.getSku());p.adjustStock(-line.quantity());order.addItem(new OrderItem(p,line.quantity(),p.getPrice()));total=total.add(p.getPrice().multiply(BigDecimal.valueOf(line.quantity())));}order.setTotal(total);var saved=orders.save(order);log.info("Order placed id="+saved.getId()+" total="+total);return Views.OrderView.of(saved);}
+ public Views.OrderView order(Long id){return Views.OrderView.of(orders.findById(id).orElseThrow(()->new NotFoundException("Order not found: "+id)));}
+ public Views.OrderView changeStatus(Long id,OrderStatus next){CustomerOrder o=orders.findById(id).orElseThrow(()->new NotFoundException("Order not found: "+id));try{o.changeStatus(next);}catch(IllegalStateException e){throw new ConflictException(e.getMessage());}return Views.OrderView.of(o);}
+ public Views.SalesReport sales(){var sold=orders.findByStatusIn(List.of(OrderStatus.PAID,OrderStatus.SHIPPED,OrderStatus.DELIVERED));BigDecimal gross=sold.stream().map(CustomerOrder::getTotal).reduce(BigDecimal.ZERO,BigDecimal::add);long units=sold.stream().flatMap(o->o.getItems().stream()).mapToLong(OrderItem::getQuantity).sum();return new Views.SalesReport(sold.size(),gross,units);}
+ private Product productOrThrow(Long id){return products.findById(id).orElseThrow(()->new NotFoundException("Product not found: "+id));}
+}
